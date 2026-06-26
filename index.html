@@ -1,1 +1,597 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle - Suporte Técnico por Mês</title>
+    <!-- Importando a biblioteca de gráficos Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background-color: #1e293b;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            .header-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+            .btn-excel, .select-filtro { width: 100%; }
+        }
+
+        .select-filtro {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #1e293b;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        .btn-excel {
+            background-color: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .btn-excel:hover { background-color: #059669; }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .main-layout { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            color: #1e293b;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            height: 80px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-submit:hover { background-color: #1d4ed8; }
+
+        /* Nova grade de estatísticas expandida para todas as opções */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-box {
+            background: #fff;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            border-left: 4px solid #64748b;
+        }
+
+        .stat-box h3 {
+            font-size: 0.75rem;
+            color: #475569;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stat-box p {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1e293b;
+            margin-top: 3px;
+        }
+
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 250px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .chamado-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .chamado-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin-bottom: 5px;
+        }
+
+        .badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: white;
+        }
+
+        /* Cores padronizadas por categoria */
+        .color-total { border-left-color: #1e293b; background-color: #f8fafc; }
+        .color-queda { border-left-color: #ef4444; background-color: #fef2f2; }
+        .color-lentidao { border-left-color: #f59e0b; background-color: #fffbeb; }
+        .color-roteador { border-left-color: #3b82f6; background-color: #eff6ff; }
+        .color-senha { border-left-color: #a855f7; background-color: #faf5ff; }
+        .color-comodo { border-left-color: #06b6d4; background-color: #ecfeff; }
+        .color-transferidos { border-left-color: #ec4899; background-color: #fdf2f8; }
+        .color-financeiro { border-left-color: #10b981; background-color: #f0fdf4; }
+        .color-outros { border-left-color: #64748b; background-color: #f8fafc; }
+
+        .bg-queda { background-color: #ef4444; }
+        .bg-lentidao { background-color: #f59e0b; }
+        .bg-roteador { background-color: #3b82f6; }
+        .bg-senha { background-color: #a855f7; }
+        .bg-comodo { background-color: #06b6d4; }
+        .bg-transferidos { background-color: #ec4899; }
+        .bg-financeiro { background-color: #10b981; }
+        .bg-outros { background-color: #64748b; }
+
+        .chamado-body {
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .chamado-footer {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-delete {
+            background: none;
+            color: #ef4444;
+            border: none;
+            width: auto;
+            padding: 0;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .btn-delete:hover { background: none; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div>
+                <h1>Painel do Atendente - Atendimentos Victor</h1>
+                <p>Monitore suas soluções e tipos de solicitações em tempo real</p>
+            </div>
+            <div class="header-actions">
+                <select id="filtroMes" class="select-filtro" onchange="renderizar()">
+                    <!-- Preenchido via JavaScript dinamicamente -->
+                </select>
+                <button class="btn-excel" onclick="exportarParaExcel()">
+                    📊 Exportar Mês Atual
+                </button>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <!-- Formulário -->
+            <div>
+                <div class="card">
+                    <h2>Registrar Novo Atendimento</h2>
+                    <form id="atendimentoForm">
+                        <div class="form-group">
+                            <label for="dataAtendimento">Data do Atendimento</label>
+                            <input type="date" id="dataAtendimento" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cliente">Nome do Cliente / ID</label>
+                            <input type="text" id="cliente" required placeholder="Ex: João Silva ou Cód: 4502">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="assunto">Tipo de Assunto (Categoria)</label>
+                            <select id="assunto" required>
+                                <option value="Queda de Sinal / Sem Conexão">Queda de Sinal / Sem Conexão</option>
+                                <option value="Lentidão / Oscilação">Lentidão / Oscilação</option>
+                                <option value="Configuração de Roteador / Wi-Fi">Configuração de Roteador / Wi-Fi</option>
+                                <option value="Troca de Senha / Nome da Rede">Troca de Senha / Nome da Rede</option>
+                                <option value="Mudança de Cômodo">Mudança de Cômodo</option>
+                                <option value="Transferidos (N2 / Outro Setor)">Transferidos (N2 / Outro Setor)</option>
+                                <option value="Financeiro / Desbloqueio">Financeiro / Desbloqueio</option>
+                                <option value="Outros / Dúvidas">Outros / Dúvidas</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="solucao">O que foi feito para solucionar?</label>
+                            <textarea id="solucao" required placeholder="Ex: Efetuado o reset do equipamento e reconfiguração PPPoE."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-submit">Salvar Atendimento</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Dash, Gráfico e Histórico -->
+            <div>
+                <!-- ALTERADO: Exibindo todas as opções de suporte em caixas organizadas -->
+                <div class="stats-grid">
+                    <div class="stat-box color-total" style="grid-column: span 3;">
+                        <h3 style="color: #1e293b; font-weight: bold;">Total Geral do Mês</h3>
+                        <p id="totalAtendimentos">0</p>
+                    </div>
+                    <div class="stat-box color-queda">
+                        <h3>Queda de Sinal</h3>
+                        <p id="totalQueda">0</p>
+                    </div>
+                    <div class="stat-box color-lentidao">
+                        <h3>Lentidão</h3>
+                        <p id="totalLentidao">0</p>
+                    </div>
+                    <div class="stat-box color-roteador">
+                        <h3>Config. Roteador</h3>
+                        <p id="totalRoteador">0</p>
+                    </div>
+                    <div class="stat-box color-senha">
+                        <h3>Troca de Senha</h3>
+                        <p id="totalSenha">0</p>
+                    </div>
+                    <div class="stat-box color-comodo">
+                        <h3>Mundança Cômodo</h3>
+                        <p id="totalComodo">0</p>
+                    </div>
+                    <div class="stat-box color-transferidos">
+                        <h3>Transferidos</h3>
+                        <p id="totalTransferidos">0</p>
+                    </div>
+                    <div class="stat-box color-financeiro" style="grid-column: span 1.5;">
+                        <h3>Financeiro</h3>
+                        <p id="totalFinanceiro">0</p>
+                    </div>
+                    <div class="stat-box color-outros" style="grid-column: span 2;">
+                        <h3>Outros / Dúvidas</h3>
+                        <p id="totalOutros">0</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 id="tituloGrafico">Distribuição dos Atendimentos</h2>
+                    <div class="chart-container">
+                        <canvas id="graficoAssuntos"></canvas>
+                    </div>
+                </div>
+
+                <div class="card" style="max-height: 400px; overflow-y: auto;">
+                    <h2>Histórico do Mês Selecionado</h2>
+                    <div id="listaChamados"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chamados = JSON.parse(localStorage.getItem('suporte_chamados')) || [];
+        let meuGrafico = null;
+
+        const inputData = document.getElementById('dataAtendimento');
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        inputData.value = `${ano}-${mes}-${dia}`;
+
+        const nomesMeses = [
+            "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+        ];
+
+        function inicializarFiltroMeses() {
+            const filtro = document.getElementById('filtroMes');
+            filtro.innerHTML = '';
+            
+            nomesMeses.forEach((nome, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.innerText = `${nome} / ${ano}`;
+                if (index === hoje.getMonth()) {
+                    opt.selected = true;
+                }
+                filtro.appendChild(opt);
+            });
+        }
+
+        const form = document.getElementById('atendimentoForm');
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const dataDigitada = document.getElementById('dataAtendimento').value;
+            const cliente = document.getElementById('cliente').value;
+            const assunto = document.getElementById('assunto').value;
+            const solucao = document.getElementById('solucao').value;
+
+            const partesData = dataDigitada.split('-');
+            const dataHoraBR = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
+
+            const novoChamado = {
+                id: Date.now(),
+                dataOriginal: dataDigitada,
+                cliente,
+                assunto,
+                solucao,
+                dataHora: dataHoraBR
+            };
+
+            chamados.unshift(novoChamado);
+            salvarEAtualizar();
+            
+            document.getElementById('cliente').value = '';
+            document.getElementById('solucao').value = '';
+        });
+
+        function obterClasseDistintivo(assunto) {
+            if (assunto.includes('Queda')) return 'bg-queda';
+            if (assunto.includes('Lentidão')) return 'bg-lentidao';
+            if (assunto.includes('Roteador')) return 'bg-roteador';
+            if (assunto.includes('Troca de Senha')) return 'bg-senha';
+            if (assunto.includes('Mudança de Cômodo')) return 'bg-comodo';
+            if (assunto.includes('Transferidos')) return 'bg-transferidos';
+            if (assunto.includes('Financeiro')) return 'bg-financeiro';
+            return 'bg-outros';
+        }
+
+        function deletarChamado(id) {
+            chamados = chamados.filter(c => c.id !== id);
+            salvarEAtualizar();
+        }
+
+        function salvarEAtualizar() {
+            localStorage.setItem('suporte_chamados', JSON.stringify(chamados));
+            renderizar();
+        }
+
+        function exportarParaExcel() {
+            const mesSelecionado = parseInt(document.getElementById('filtroMes').value);
+            const chamadosFiltrados = chamados.filter(c => {
+                const dataChamado = new Date(c.dataOriginal + 'T00:00:00');
+                return dataChamado.getMonth() === mesSelecionado;
+            });
+
+            if (chamadosFiltrados.length === 0) {
+                alert("Não há dados para exportar neste mês!");
+                return;
+            }
+
+            let csvContent = "\uFEFFData;Cliente / ID;Categoria;Solução Aplicada\n";
+            chamadosFiltrados.forEach(c => {
+                let solucaoLimpa = c.solucao.replace(/\n/g, " "); 
+                csvContent += `"${c.dataHora}";"${c.cliente}";"${c.assunto}";"${solucaoLimpa}"\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", `suporte_${nomesMeses[mesSelecionado].toLowerCase()}_${ano}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function atualizarGrafico(dadosContagem) {
+            const ctx = document.getElementById('graficoAssuntos').getContext('2d');
+            const labels = Object.keys(dadosContagem);
+            const valores = Object.values(dadosContagem);
+            const cores = ['#ef4444', '#f59e0b', '#3b82f6', '#a855f7', '#06b6d4', '#ec4899', '#10b981', '#64748b'];
+
+            if (meuGrafico) { meuGrafico.destroy(); }
+            if (labels.length === 0) { return; }
+
+            meuGrafico = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: valores,
+                        backgroundColor: cores.slice(0, labels.length),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } }
+                }
+            });
+        }
+
+        function renderizar() {
+            const lista = document.getElementById('listaChamados');
+            lista.innerHTML = '';
+
+            const mesSelecionado = parseInt(document.getElementById('filtroMes').value);
+            document.getElementById('tituloGrafico').innerText = `Distribuição de ${nomesMeses[mesSelecionado]}`;
+
+            // Contadores individuais para as caixas
+            let totalMês = 0;
+            let queda = 0, lentidao = 0, roteador = 0, senha = 0, comodo = 0, transferidos = 0, financeiro = 0, outros = 0;
+
+            const contagemGrafico = {
+                "Queda de Sinal": 0, "Lentidão": 0, "Config. Roteador": 0, "Troca de Senha": 0,
+                "Mudança Cômodo": 0, "Transferidos": 0, "Financeiro": 0, "Outros": 0
+            };
+
+            chamados.forEach(c => {
+                const dataChamado = new Date(c.dataOriginal + 'T00:00:00');
+                
+                if (dataChamado.getMonth() === mesSelecionado) {
+                    totalMês++;
+                    
+                    if (c.assunto.includes('Queda')) { contagemGrafico["Queda de Sinal"]++; queda++; }
+                    if (c.assunto.includes('Lentidão')) { contagemGrafico["Lentidão"]++; lentidao++; }
+                    if (c.assunto.includes('Roteador')) { contagemGrafico["Config. Roteador"]++; roteador++; }
+                    if (c.assunto.includes('Troca de Senha')) { contagemGrafico["Troca de Senha"]++; senha++; }
+                    if (c.assunto.includes('Mudança de Cômodo')) { contagemGrafico["Mudança Cômodo"]++; comodo++; }
+                    if (c.assunto.includes('Transferidos')) { contagemGrafico["Transferidos"]++; transferidos++; }
+                    if (c.assunto.includes('Financeiro')) { contagemGrafico["Financeiro"]++; financeiro++; }
+                    if (c.assunto.includes('Outros')) { contagemGrafico["Outros"]++; outros++; }
+
+                    const item = document.createElement('div');
+                    item.className = 'chamado-item';
+                    item.innerHTML = `
+                        <div class="chamado-header">
+                            <span>${c.cliente}</span>
+                            <span class="badge ${obterClasseDistintivo(c.assunto)}">${c.assunto}</span>
+                        </div>
+                        <div class="chamado-body">
+                            <strong>Solução:</strong> ${c.solucao}
+                        </div>
+                        <div class="chamado-footer">
+                            <span>${c.dataHora}</span>
+                            <button class="btn-delete" onclick="deletarChamado(${c.id})">Excluir</button>
+                        </div>
+                    `;
+                    lista.appendChild(item);
+                }
+            });
+
+            if (totalMês === 0) {
+                lista.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">Nenhum atendimento registrado neste mês.</p>';
+            }
+
+            // Atualiza os números nas novas caixas na tela
+            document.getElementById('totalAtendimentos').innerText = totalMês;
+            document.getElementById('totalQueda').innerText = queda;
+            document.getElementById('totalLentidao').innerText = lentidao;
+            document.getElementById('totalRoteador').innerText = roteador;
+            document.getElementById('totalSenha').innerText = senha;
+            document.getElementById('totalComodo').innerText = comodo;
+            document.getElementById('totalTransferidos').innerText = transferidos;
+            document.getElementById('totalFinanceiro').innerText = financeiro;
+            document.getElementById('totalOutros').innerText = outros;
+
+            const contagemFiltrada = {};
+            for (const key in contagemGrafico) {
+                if (contagemGrafico[key] > 0) { contagemFiltrada[key] = contagemGrafico[key]; }
+            }
+            atualizarGrafico(contagemFiltrada);
+        }
+
+        inicializarFiltroMeses();
+        renderizar();
+    </script>
+</body>
+</html>
